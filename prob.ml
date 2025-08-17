@@ -73,7 +73,8 @@ module ProbMonad = struct
       let Dist ys = f x in
       let* (y, q) = ys in
       return (y, p *. q)
-    )
+    ) 
+    (* |> dedup *)
   let (let*) xs f = xs >>= f
   let foldl1 f xs =
     match xs with
@@ -124,23 +125,22 @@ end
 
 let test_prob =
   let open ProbMonad in
-  let d6_1 = die 6 in
-  show string_of_int d6_1 |> Printf.printf "D6: %s\n";
-  let d6_2 = die 6 in
+  let d6 = die 6 in
+  show string_of_int d6 |> Printf.printf "D6: %s\n";
   let result = 
     let open ProbMonad in
     (* d1 >>= fun x -> d2 >>= fun y -> return (x + y) *)
     (* or equivalently using let* syntax *)
-    let* x = d6_1 in
-    let* y = d6_2 in
+    let* x = d6 in
+    let* y = d6 in
     return (x + y)
   in
   show string_of_int result |> Printf.printf "D6 + D6: %s\n";
   let d4 = die 4 in
   let result = 
     let open ProbMonad in
-    let* x = d6_1 in
-    let* y = d6_2 in
+    let* x = d6 in
+    let* y = d6 in
     let* z = d4 in
     return (x + y > z)
   in
@@ -168,4 +168,84 @@ let test_prob =
   let binomial_result = binom 10 0.5 in
   show string_of_int binomial_result |> Printf.printf "Binomial Distribution (n=10, p=0.5): %s\n";
   
+  Printf.printf "%!";
+
+  ()
+
+
+let [@warning "-8"] () =
+  let open ProbMonad in
+  let d6 = die 6 in
+  (* suppress warning pattern match *)
+  let losses = 
+    let* a1 = d6 in
+    let* a2 = d6 in
+    let* a3 = d6 in
+    let* d1 = d6 in
+    let* d2 = d6 in
+    let* d3 = d6 in
+    let [a3'; a2'; a1'] = List.sort compare [a1; a2; a3] in
+    let [d2'; d1'] = List.sort compare [d1; d2] in
+    (* old risk -- the defender gets three dice *)
+    (* let [d3'; d2'; d1'] = List.sort compare [d1; d2; d3] in  *)
+    let score =
+      (if a1' > d1' then 1 else -1) + (* compare best dice *)
+      (if a2' > d2' then 1 else -1)   (* compare second best dice *)
+    in 
+    return score
+  in
+  show string_of_int losses |> Printf.printf "Risk losses: %s\n";
+  ()
+
+
+let time f x = 
+  let start = Sys.time () in
+  let result = f x in
+  let duration = Sys.time () -. start in
+  Printf.printf "Time taken: %.3f seconds\n" duration;
+  result
+
+let () =
+  let open ProbMonad in
+  (* dice 6 7 will be much slower -- eager dedup does not help here *)
+  time (fun () ->
+  let rec diceSix num n =
+    if n == 0 then return []
+    else
+      let* x = die num in
+      let* xs = dice num (n - 1) in
+      if x = 6 then
+        return (6 :: xs)
+      else
+        return (xs)
+  in
+  let result = diceSix 6 7 >>= fun xs ->
+    return ((xs |> List.filter (fun x -> x = 6) |> List.length)>=2) in
+  show string_of_bool result |> Printf.printf "n D6: at least 2 sixes: %s\n"
+  ) ();
+  ()
+
+
+module ProbNotation = struct
+  include ProbMonad
+  open ProbMonad
+  let lift op x y = 
+    let* a = x in
+    let* b = y in
+    return (op a b)
+  let (+) = lift ( + )
+  let (-) = lift ( - )
+  let ( * ) = lift ( * )
+  let (/) = lift ( / )
+  let (>) = lift ( > )
+  let (>=) = lift ( >= )
+  let (<) = lift ( < )
+  let (<=) = lift ( <= )
+end
+
+let () =
+  let open ProbNotation in
+  let d6 = die 6 in
+  let d4 = die 4 in
+  show string_of_bool (d4+d4 > d6) |> Printf.printf "D6: %s\n";
   ()
