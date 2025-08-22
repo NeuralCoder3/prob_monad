@@ -40,4 +40,30 @@ as we combine the events and compute the probabilities in a DP-like fashion.
 However, this does not help for cases where events are only grouped at the end or can not be grouped at all.
 
 
+## Examples
 
+Python:
+```python
+>>> D6 > 3
+Distribution(False: 0.50, True: 0.50)
+>>> D6 + D6
+Distribution(2: 0.03, 3: 0.06, 4: 0.08, 5: 0.11, 6: 0.14, 7: 0.17, 8: 0.14, 9: 0.11, 10: 0.08, 11: 0.06, 12: 0.03)
+>>> D6 * 2
+Distribution(2: 0.17, 4: 0.17, 6: 0.17, 8: 0.17, 10: 0.17, 12: 0.17)
+```
+
+OCaml:
+```ocaml
+let* x = d6 in
+let* y = d6 in
+return (x + y)
+Output: {2: 2.8%; 3: 5.6%; 4: 8.3%; 5: 11.1%; 6: 13.9%; 7: 16.7%; 8: 13.9%; 9: 11.1%; 10: 8.3%; 11: 5.6%; 12: 2.8%}
+
+(* at least two sixes out of four D6 *)
+let* xs = dice 6 4 in return ((xs |> List.filter (fun x -> x = 6) |> List.length)>=2)
+Output: {false: 86.8%; true: 13.2%}
+
+(* with operator overwriting *)
+d4+d4 > d6
+Output: {false: 34.4%; true: 65.6%}
+```

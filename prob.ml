@@ -150,15 +150,11 @@ let test_prob =
   show (ListMonad.show string_of_int) result |> Printf.printf "2 D6: %s\n";
   let result = result >>= fun xs -> return (List.sort compare xs) in
   show (ListMonad.show string_of_int) result |> Printf.printf "2 D6: %s\n";
-  let result = dice 6 4 >>= fun xs ->
-    return ((xs |> List.filter (fun x -> x = 6) |> List.length)>=2) in
+  let result = let* xs = dice 6 4 in return ((xs |> List.filter (fun x -> x = 6) |> List.length)>=2) in
   show string_of_bool result |> Printf.printf "4 D6: at least 2 sixes: %s\n";
 
   let result = select 3 ["R"; "R"; "G"; "G"; "B"] >>= (fun xs -> return (xs = ["R";"G";"B"])) in
-  (* let result = select 3 ["R"; "R"; "G"; "G"; "B"] >>= (fun xs -> return (xs = ["R";"B";"B"])) in *)
   show string_of_bool result |> Printf.printf "Select 3 from [R; R; G; G; B]: %s\n";
-  (* let result = select 3 ["R"; "R"; "G"; "G"; "B"] in *)
-  (* show (ListMonad.show Fun.id) result |> Printf.printf "Select 3 from [R; R; G; G; B]: %s\n"; *)
 
   let coin_flip = coin 0.5 "Heads" "Tails" in
   show Fun.id coin_flip |> Printf.printf "Coin Flip: %s\n";
@@ -172,7 +168,10 @@ let test_prob =
 
   ()
 
-
+(*
+Compute the advantage of the attacking force over the defending force
+  in a game of Risk
+*)
 let [@warning "-8"] () =
   let open ProbMonad in
   let d6 = die 6 in
@@ -205,6 +204,10 @@ let time f x =
   Printf.printf "Time taken: %.3f seconds\n" duration;
   result
 
+(*
+Stress test: Roll a bunch of dices and 
+check the probability of rolling at least two six
+*)
 let () =
   let open ProbMonad in
   (* dice 6 7 will be much slower -- eager dedup does not help here *)
@@ -247,5 +250,5 @@ let () =
   let open ProbNotation in
   let d6 = die 6 in
   let d4 = die 4 in
-  show string_of_bool (d4+d4 > d6) |> Printf.printf "D6: %s\n";
+  show string_of_bool (d4+d4 > d6) |> Printf.printf "D4+D4>D6: %s\n";
   ()
